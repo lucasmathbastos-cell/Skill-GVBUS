@@ -1,0 +1,39 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "gvbus",
+      "intents": [
+        {
+          "name": "GetLineScheduleIntent",
+          "slots": [
+            {
+              "name": "linha",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "horário da linha {linha}",
+            "qual o horário da linha {linha}",
+            "linha {linha}"
+          ]
+        },
+        {
+          "name": "ListLinesIntent",
+          "samples": [
+            "listar linhas",
+            "quais linhas existem",
+            "quais são as linhas disponíveis"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ]
+    }
+  }
+}

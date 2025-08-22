@@ -1,0 +1,117 @@
+const Alexa = require('ask-sdk-core');
+const fetch = require('node-fetch');
+
+// Base da API pública
+const API_BASE = 'https://dados.vitoria.es.gov.br/api/transporte/onibus';
+
+// Intent: buscar horários de uma linha
+const GetLineScheduleIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+      && Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetLineScheduleIntent';
+  },
+  async handle(handlerInput) {
+    const linhaSlot = handlerInput.requestEnvelope.request.intent.slots.linha.value;
+    let speechOutput = '';
+
+    try {
+      // Pesquisa linhas pelo nome/número
+      let resp = await fetch(`${API_BASE}/linhas?descricao=${encodeURIComponent(linhaSlot)}`);
+      let lines = await resp.json();
+
+      if (!lines.length) {
+        speechOutput = `Não encontrei nenhuma linha chamada ${linhaSlot}.`;
+      } else {
+        const line = lines[0]; // primeira encontrada
+        const detailsResp = await fetch(`${API_BASE}/linhas/${line.id}`);
+        const details = await detailsResp.json();
+
+        const horarios = details.horarios && details.horarios.length > 0
+          ? details.horarios.slice(0, 10).join(', ') // limita os primeiros 10 horários
+          : null;
+
+        if (horarios) {
+          speechOutput = `Os próximos horários da linha ${line.descricao} são: ${horarios}.`;
+        } else {
+          speechOutput = `Não encontrei horários disponíveis para a linha ${line.descricao}.`;
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      speechOutput = 'Desculpe, houve um erro ao buscar os horários. Tente novamente mais tarde.';
+    }
+
+    return handlerInput.responseBuilder
+      .speak(speechOutput)
+      .reprompt('Quer consultar outra linha?')
+      .getResponse();
+  }
+};
+
+// Intent: listar linhas disponíveis
+const ListLinesIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+      && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ListLinesIntent';
+  },
+  async handle(handlerInput) {
+    let speechOutput = '';
+    try {
+      const resp = await fetch(`${API_BASE}/linhas`);
+      const lines = await resp.json();
+
+      if (!lines.length) {
+        speechOutput = 'Não consegui encontrar nenhuma linha agora.';
+      } else {
+        const topLines = lines.slice(0, 10).map(l => l.descricao).join(', ');
+        speechOutput = `Algumas das linhas disponíveis são: ${topLines}, entre muitas outras.`;
+      }
+    } catch (error) {
+      console.error(error);
+      speechOutput = 'Erro ao buscar as linhas. Tente novamente mais tarde.';
+    }
+
+    return handlerInput.responseBuilder
+      .speak(speechOutput)
+      .reprompt('Deseja saber os horários de alguma linha específica?')
+      .getResponse();
+  }
+};
+
+// Padrões Alexa
+const HelpIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+      && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
+  },
+  handle(handlerInput) {
+    const speechOutput = 'Você pode perguntar: Qual o horário da linha 102? ou Listar linhas disponíveis.';
+    return handlerInput.responseBuilder
+      .speak(speechOutput)
+      .reprompt(speechOutput)
+      .getResponse();
+  }
+};
+
+const FallbackIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+      && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+  },
+  handle(handlerInput) {
+    const speechOutput = 'Desculpe, não entendi. Pergunte, por exemplo: horário da linha 105.';
+    return handlerInput.responseBuilder
+      .speak(speechOutput)
+      .reprompt('Tente: horário da linha 102.')
+      .getResponse();
+  }
+};
+
+exports.handler = Alexa.SkillBuilders.custom()
+  .addRequestHandlers(
+    GetLineScheduleIntentHandler,
+    ListLinesIntentHandler,
+    HelpIntentHandler,
+    FallbackIntentHandler
+  )
+  .lambda();

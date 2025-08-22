@@ -1,0 +1,11 @@
+{
+  "name": "gvbus-skill",
+  "version": "1.0.0",
+  "description": "Skill Alexa para horários de ônibus GVBus (Grande Vitória - ES)",
+  "main": "index.js",
+  "dependencies": {
+    "ask-sdk-core": "^2.12.1",
+    "ask-sdk-model": "^1.35.0",
+    "node-fetch": "^2.6.7"
+  }
+}
